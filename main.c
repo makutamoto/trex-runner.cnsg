@@ -86,8 +86,13 @@ void spaceEvent(void) {
   if(heroNode.collisionFlags & STAGE_COLLISIONMASK) heroNode.impulseForce[1] += 400.0F;
 }
 
+static void F1Event(void) {
+  setDebugMode(!getDebugMode());
+}
+
 void initGame(void) {
   shnm12 = initFontSJIS(loadBitmap("assets/shnm6x12r.bmp", NULL_COLOR), loadBitmap("assets/shnmk12.bmp", NULL_COLOR), 6, 12, 12);
+  initControllerEvent(VK_F1, NULL, F1Event);
   initControllerEvent('W', spaceEvent, NULL);
   initControllerEvent('R', NULL, startGame);
   // initControllerDataCross(moveData, 'W', 'A', 'S', 'D', move);
@@ -98,8 +103,8 @@ void initGame(void) {
   gameScene.camera.position[2] = -100.0F;
   scoreInterval = addIntervalEventScene(&gameScene, 1.0F, gameSceneInterval);
   saboImage = loadBitmap("./assets/sabo.bmp", WHITE);
-  saboCollisionImage = loadBitmap("./assets/saboCollision.bmp", NULL_COLOR);
-  heroNode = initNodeSprite("hero", 75.0F, 75.0F, loadBitmap("./assets/hero.bmp", WHITE), loadBitmap("./assets/heroCollision.bmp", NULL_COLOR));
+  saboCollisionImage = loadBitmap("./assets/saboCollision.bmp", WHITE);
+  heroNode = initNodeSprite("hero", 75.0F, 75.0F, loadBitmap("./assets/hero.bmp", WHITE), loadBitmap("./assets/heroCollision.bmp", WHITE));
   heroNode.position[0] = -100.0F;
   heroNode.isGravityEnabled = TRUE;
   heroNode.collisionMaskPassive = STAGE_COLLISIONMASK | ENEMY_COLLISIONMASK;
