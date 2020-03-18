@@ -1,6 +1,8 @@
 #include<stdio.h>
 #include<math.h>
 #include<Windows.h>
+#include<direct.h>
+#include<time.h>
 
 #include "./cnsglib/include/cnsg.h"
 
@@ -12,6 +14,9 @@
 #define ENEMY_COLLISIONMASK 0x02
 
 static FontSJIS shnm12;
+static WindowManager *rootManager;
+static Window gameWindow;
+static View gameView;
 static Scene gameScene;
 static Image saboImage, saboCollisionImage;
 static Node heroNode;
@@ -49,7 +54,7 @@ int heroBehaviour(Node *node, float elapsed) {
   return TRUE;
 }
 
-int gameSceneInterval(Scene *scene) {
+int gameSceneInterval(Scene *scene, void *data) {
   if(rand() % 3) spawnSabo(&gameScene, 200.0F, -25.0F);
   score += 1;
   return TRUE;
@@ -72,17 +77,17 @@ void startGame(void) {
       free(node);
     }
   }
-
+  setWindow(rootManager, &gameWindow, revoluteTransition, 1.0F);
 }
 
 int scoreBehaviour(Node *node, float elapsed) {
   char buffer[11];
   sprintf(buffer, "SCORE %04d", score);
-  drawTextSJIS(node->texture, shnm12, 0.0F, 0.0F, buffer);
+  drawTextSJIS(&node->texture, &shnm12, 0.0F, 0.0F, buffer);
   return TRUE;
 }
 
-void spaceEvent(void) {
+static void spaceEvent(void) {
   if(heroNode.collisionFlags & STAGE_COLLISIONMASK) heroNode.impulseForce[1] += 400.0F;
 }
 
@@ -90,18 +95,35 @@ static void F1Event(void) {
   setDebugMode(!getDebugMode());
 }
 
+static void F12Event(void) {
+  Image screenshot;
+  char path[64];
+  time_t current;
+  struct tm local;
+  _mkdir("./screenshots/");
+  getScreenShot(&screenshot);
+  current = time(NULL);
+  localtime_s(&local, &current);
+  strftime(path, sizeof(path), "./screenshots/%Y-%m-%d-%H-%M-%S.bmp", &local);
+  saveBitmap(&screenshot, path);
+  freeImage(&screenshot);
+}
+
 void initGame(void) {
   shnm12 = initFontSJIS(loadBitmap("assets/shnm6x12r.bmp", NULL_COLOR), loadBitmap("assets/shnmk12.bmp", NULL_COLOR), 6, 12, 12);
-  initControllerEvent(VK_F1, NULL, F1Event);
-  initControllerEvent('W', spaceEvent, NULL);
-  initControllerEvent('R', NULL, startGame);
   // initControllerDataCross(moveData, 'W', 'A', 'S', 'D', move);
+  gameWindow = initWindow();
+  gameView = initView(&gameScene);
+  push(&gameWindow.views, &gameView);
   gameScene = initScene();
-  setCurrentScene(&gameScene, NULL, 0.0F);
   gameScene.background = BLUE;
   gameScene.acceleration[1] = -1000.0F;
   gameScene.camera.position[2] = -100.0F;
-  scoreInterval = addIntervalEventScene(&gameScene, 1.0F, gameSceneInterval);
+  initControllerEvent(&gameScene.camera.controllerList, VK_F1, NULL, F1Event);
+  initControllerEvent(&gameScene.camera.controllerList, VK_F12, NULL, F12Event);
+  initControllerEvent(&gameScene.camera.controllerList, VK_SPACE, spaceEvent, NULL);
+  initControllerEvent(&gameScene.camera.controllerList, 'R', NULL, startGame);
+  scoreInterval = addIntervalEventScene(&gameScene, 1.0F, gameSceneInterval, NULL);
   saboImage = loadBitmap("./assets/sabo.bmp", WHITE);
   saboCollisionImage = loadBitmap("./assets/saboCollision.bmp", WHITE);
   heroNode = initNodeSprite("hero", 75.0F, 75.0F, loadBitmap("./assets/hero.bmp", WHITE), loadBitmap("./assets/heroCollision.bmp", WHITE));
@@ -111,7 +133,7 @@ void initGame(void) {
   heroNode.behaviour = heroBehaviour;
   push(&gameScene.nodes, &heroNode);
   gameoverNode = initNodeText("gameover", 0.0F, 0.0F, CENTER, CENTER, 72, 36, NULL);
-  drawTextSJIS(gameoverNode.texture, shnm12, 0.0F, 0.0F, "GAMEOVER\nPRESS \"R\"\nTO CONTINUE.");
+  drawTextSJIS(&gameoverNode.texture, &shnm12, 0.0F, 0.0F, "GAMEOVER\nPRESS \"R\"\nTO CONTINUE.");
   push(&gameScene.nodes, &gameoverNode);
   scoreNode = initNodeText("score", 0.0F, 0.0F, RIGHT, TOP, 60, 12, scoreBehaviour);
   push(&gameScene.nodes, &scoreNode);
@@ -122,7 +144,7 @@ void initGame(void) {
 }
 
 int main(int argc, char *argv[]) {
-  initCNSG(argc, argv, SCREEN_WIDTH, SCREEN_HEIGHT);
+  rootManager = initCNSG(argc, argv, SCREEN_WIDTH, SCREEN_HEIGHT);
   initGame();
   startGame();
   gameLoop(FRAME_PER_SECOND);
