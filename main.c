@@ -69,6 +69,7 @@ void startGame(void) {
   gameScene.speed = 1.0F;
   scoreInterval->counter = 0.0F;
   heroNode.position[1] = 0.0F;
+  updatePosition(&heroNode);
   clearVec3(heroNode.velocity);
   iterf(&gameScene.nodes, &node) {
     if(node->collisionMaskActive & ENEMY_COLLISIONMASK) {
